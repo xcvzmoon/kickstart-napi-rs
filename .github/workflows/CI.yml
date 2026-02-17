@@ -139,7 +139,7 @@ jobs:
           architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
         run: |
-          rm -f bun.lock
+          rm -rf node_modules bun.lock
           bun install
       - name: Download artifacts
         uses: actions/download-artifact@v7
@@ -174,7 +174,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Install dependencies
         run: |
-          rm -f bun.lock
+          rm -rf node_modules bun.lock
           bun install
       - name: Download artifacts
         uses: actions/download-artifact@v7
