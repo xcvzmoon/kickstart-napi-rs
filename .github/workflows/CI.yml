@@ -25,17 +25,20 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - name: Install dependencies
-        run: bun install
+        run: npm ci
       - name: Oxlint
-        run: bun run lint
+        run: npm run lint
       - name: Cargo fmt
         run: cargo fmt -- --check
       - name: Clippy
@@ -47,29 +50,32 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: bun run build --target x86_64-apple-darwin
+            build: npm run build -- --target x86_64-apple-darwin
           - host: windows-latest
-            build: bun run build --target x86_64-pc-windows-msvc
+            build: npm run build -- --target x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: bun run build --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: npm run build -- --target x86_64-unknown-linux-gnu --use-napi-cross
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: bun run build --target aarch64-apple-darwin
+            build: npm run build -- --target aarch64-apple-darwin
     name: stable - ${{ matrix.settings.target }} - node@22
     runs-on: ${{ matrix.settings.host }}
     steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
       - name: Cache cargo
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
@@ -95,12 +101,12 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: bun install
+        run: npm ci
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: |
@@ -129,20 +135,17 @@ jobs:
           - '22'
     runs-on: ${{ matrix.settings.host }}
     steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Setup node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+          cache: 'npm'
           architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
-        run: |
-          rm -rf node_modules bun.lock
-          bun install
+        run: npm ci
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: .
@@ -150,7 +153,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: bun run test
+        run: npm test
   test-linux-binding:
     name: Test ${{ matrix.target }} - node@${{ matrix.node }}
     needs:
@@ -165,19 +168,16 @@ jobs:
           - '22'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Setup node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+          cache: 'npm'
       - name: Install dependencies
-        run: |
-          rm -rf node_modules bun.lock
-          bun install
+        run: npm ci
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: bindings-${{ matrix.target }}
           path: .
@@ -185,7 +185,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: bun run test
+        run: npm test
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -197,23 +197,23 @@ jobs:
       - test-macOS-windows-binding
       - test-linux-binding
     steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Setup node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '22'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
-        run: bun install
-      - name: create npm dirs
-        run: bunx napi create-npm-dirs
+        run: npm ci
+      - name: Create npm dirs
+        run: npx napi create-npm-dirs
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Move artifacts
-        run: bunx napi artifacts
+        run: npx napi artifacts
       - name: List packages
         run: ls -R ./npm
         shell: bash
@@ -222,15 +222,13 @@ jobs:
           npm config set provenance true
           if git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+$";
           then
-            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
             npm publish --access public
           elif git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+";
           then
-            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
             npm publish --tag next --access public
           else
             echo "Not a release, skipping publish"
           fi
         env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
