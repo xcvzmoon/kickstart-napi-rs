@@ -26,19 +26,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Oxlint
-        run: npm run lint
+        run: bun run lint
       - name: Cargo fmt
         run: cargo fmt -- --check
       - name: Clippy
@@ -50,25 +47,22 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: npm run build -- --target x86_64-apple-darwin
+            build: bun run build -- --target x86_64-apple-darwin
           - host: windows-latest
-            build: npm run build -- --target x86_64-pc-windows-msvc
+            build: bun run build -- --target x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: npm run build -- --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: bun run build -- --target x86_64-unknown-linux-gnu --use-napi-cross
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: npm run build -- --target aarch64-apple-darwin
+            build: bun run build -- --target aarch64-apple-darwin
     name: stable - ${{ matrix.settings.target }} - node@22
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -101,7 +95,7 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
@@ -136,14 +130,10 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-          cache: 'npm'
-          architecture: ${{ matrix.settings.architecture }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: npm ci
+        run: bun install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -153,7 +143,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: npm test
+        run: bun run test
   test-linux-binding:
     name: Test ${{ matrix.target }} - node@${{ matrix.node }}
     needs:
@@ -169,13 +159,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-          cache: 'npm'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: npm ci
+        run: bun install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -185,7 +172,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: npm test
+        run: bun run test
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -198,22 +185,23 @@ jobs:
       - test-linux-binding
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js for npm publishing
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Create npm dirs
-        run: npx napi create-npm-dirs
+        run: bunx napi create-npm-dirs
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Move artifacts
-        run: npx napi artifacts
+        run: bunx napi artifacts
       - name: List packages
         run: ls -R ./npm
         shell: bash
